@@ -1,0 +1,7 @@
+rootfs/
+rootfs.squashfs*
+*.img
+*.squashfs
+OVMF_*
+l*.conf
+*vdi

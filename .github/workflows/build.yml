@@ -1,0 +1,46 @@
+name: Build rootfs and UKI
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base base-devel \
+            squashfs-tools \
+            git alpine-chroot-install apk-tools alpine-keyring
+
+      - name: Run build
+        run: |
+          chmod +x build.sh
+          bash build.sh
+
+      - name: Generate version tags
+        id: version
+        run: echo "tag=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "${{ steps.version.outputs.tag }}"
+          files: |
+            /hardenedos/rootfs.squashfs
+            /hardenedos/rootfs/boot/uki.efi

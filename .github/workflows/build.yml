@@ -1,0 +1,71 @@
+name: Build rootfs and UKI
+
+on:
+  # push:
+  #   branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base base-devel \
+            squashfs-tools erofs-utils \
+            git alpine-chroot-install sbsigntools apk-tools alpine-keyring
+
+      - name: Write Secure Boot keys to files
+        env:
+          SB_DB_KEY: ${{ secrets.SB_DB_KEY }}
+          SB_DB_CRT: ${{ secrets.SB_DB_CRT }}
+          SB_KEK_KEY: ${{ secrets.SB_KEK_KEY }}
+          SB_KEK_CRT: ${{ secrets.SB_KEK_CRT }}
+          SB_PK_KEY: ${{ secrets.SB_PK_KEY }}
+          SB_PK_CRT: ${{ secrets.SB_PK_CRT }}
+        run: |
+          rm -rf /tmp/sbsign/ && mkdir -p /tmp/sbsign/keys/{db,KEK,PK}
+          chmod 700 /tmp/sbsign/keys
+
+          echo "$SB_DB_KEY"  | base64 -d > /tmp/sbsign/keys/db/db.key
+          echo "$SB_DB_CRT"  | base64 -d > /tmp/sbsign/keys/db/db.pem
+          echo "$SB_KEK_KEY" | base64 -d > /tmp/sbsign/keys/KEK/KEK.key
+          echo "$SB_KEK_CRT" | base64 -d > /tmp/sbsign/keys/KEK/KEK.pem
+          echo "$SB_PK_KEY"  | base64 -d > /tmp/sbsign/keys/PK/PK.key
+          echo "$SB_PK_CRT"  | base64 -d > /tmp/sbsign/keys/PK/PK.pem
+
+          chmod 600 /tmp/sbsign/keys/**/*
+
+      - name: Generate version tags
+        id: version
+        run: echo "tag=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Run build
+        env:
+          OS_BUILD_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          chmod +x build.sh
+          bash build.sh
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "os-${{ steps.version.outputs.tag }}"
+          files: |
+            /hardenedos/rootfs.squashfs
+            /hardenedos/rootfs.squashfs.verity
+            /hardenedos/rootfs/boot/uki-${{ steps.version.outputs.tag }}-signed.efi
+            /hardenedos/bootloader-signed.efi

@@ -1,0 +1,12 @@
+/bin/bash
+/usr/lib/libtss2-tcti-device.so.0
+/usr/bin/tpm2_*
+/usr/bin/argon2
+/usr/bin/openssl
+/usr/bin/cryptsetup
+/usr/bin/jq
+/usr/local/bin/crypter
+/sbin/mkfs.ext4
+/usr/sbin/useradd
+/usr/sbin/chpasswd
+/usr/local/bin/populate-data

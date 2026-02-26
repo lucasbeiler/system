@@ -1,0 +1,13 @@
+#!/bin/sh
+HOST_DEV=$(ip route get 8.8.8.8 | awk '{print $5}')
+iptables -t nat -A POSTROUTING -o "$HOST_DEV" -j MASQUERADE
+
+modprobe tun
+while IFS=: read -r user _ uid _; do
+    [ "$uid" -ge 1000 ] && [ "$uid" -le 65000 ] || continue
+    ip tuntap add mode tap user "$user" vnet_hdr tap_${user}
+    ip addr add 192.168.10.1/24 dev tap_${user}
+    ip link set tap_${user} up
+    iptables -A FORWARD -i "$HOST_DEV" -o tap_${user} -m state --state RELATED,ESTABLISHED -j ACCEPT
+    iptables -A FORWARD -i tap_${user} -o "$HOST_DEV" -j ACCEPT
+done < /etc/passwd

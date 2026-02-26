@@ -1,0 +1,1 @@
+KERNEL=="tap[0-9]*", GROUP="macvtap", MODE="0667"

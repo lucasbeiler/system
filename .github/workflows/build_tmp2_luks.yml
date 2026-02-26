@@ -1,0 +1,39 @@
+name: Build tpm2_luks
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build tpm2_luks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container:
+      image: alpine:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apk add --no-cache \
+            cargo rust \
+            tpm2-tss-dev tpm2-tools tpm2-tss-dev tpm2-tss-tcti-device \
+            cryptsetup-dev \
+            musl-dev \
+            git curl llvm-dev clang clang21-libclang
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cd root_files/usr/src/crypt/tpm2_luks
+          cargo build --release
+      - name: Upload binary to repository
+        run: |
+          git config --global --add safe.directory '*'
+          cp root_files/usr/src/crypt/tpm2_luks/target/release/tpm2_luks root_files/usr/local/bin/crypter
+          git add root_files/usr/local/bin/
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "CI: Update tpm2_luks binary [skip ci]"
+          git push

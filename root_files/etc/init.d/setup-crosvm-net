@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+
+name="setup-crosvm-net"
+description="Prepare things"
+
+command="/usr/local/bin/setup-crosvm-net"
+command_background=false
+
+start_pre() {
+    if [ ! -f /usr/local/bin/setup-crosvm-net ]; then
+        return 1
+    fi
+}
+
+start() {
+    ebegin "Running..."
+    $command
+    eend $?
+}

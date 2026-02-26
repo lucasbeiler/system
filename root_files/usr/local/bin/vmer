@@ -1,0 +1,5 @@
+#!/bin/sh
+set -euo pipefail
+cp -r /vm_image/ $HOME/.vm_image/
+
+crosvm run -i $HOME/.vm_image/initrd.img --net tap-name=tap_${USER} --block $HOME/.vm_image/deb_rootfs.ext4,root $HOME/.vm_image/vmlinuz

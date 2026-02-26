@@ -1,0 +1,20 @@
+[package]
+name = "tpm2_luks"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+argon2 = "*"
+base64 = "*"
+getrandom = "*"
+hex = "*"
+hmac = "*"
+rand = "*"
+sha2 = "*"
+zeroize = "*"
+tss-esapi = "*"
+libcryptsetup-rs = "*"
+serde_json = "*"
+
+[build]
+rustflags = ["-Awarnings"]

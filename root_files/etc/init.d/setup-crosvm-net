@@ -1,0 +1,27 @@
+#!/sbin/openrc-run
+
+name="setup-crosvm-net"
+description="Prepare things"
+
+command="/usr/local/bin/setup-crosvm-net"
+command_background=false
+
+start_pre() {
+    if [ ! -f /usr/local/bin/setup-crosvm-net ]; then
+        return 1
+    fi
+    ebegin "Waiting for default route"
+    sleep 2
+    eend 0
+}
+
+start() {
+    ebegin "Running..."
+    $command
+    eend $?
+}
+
+depend() {
+    need net
+    after iwd
+}

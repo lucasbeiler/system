@@ -1,0 +1,25 @@
+#!/bin/sh
+set -euo pipefail
+# TODO: Maybe rewrite in Rust. Shell scripts sound hacky and hard to ensure zeroing data from allocated memory.
+
+# Configuration. TODO: Should be more dynamic.
+MAPPER_NAME="data"
+
+mkfs.ext4 -L data /dev/mapper/$MAPPER_NAME
+mkdir /mnt
+mount -t erofs /dev/mapper/root /mnt
+mount -t ext4 /dev/mapper/$MAPPER_NAME /mnt/data
+mkdir -p /mnt/data/etc
+for f in /mnt/etc/*.bkp; do
+  [ -e "$f" ] || continue
+  cp "$f" "/mnt/data/etc/$(basename "${f%.bkp}")"
+done
+
+clear
+read -rs -p "Enter the name for your user: " USERNAME
+useradd -P /mnt/data -G disk,input,audio,video,netdev,users -m -s /bin/sh $USERNAME
+mkdir -p /mnt/data/home/${USERNAME} /mnt/data/var/lib/iwd/ /mnt/data/var/empty/ /mnt/data/var/lock/ /mnt/data/var/log/
+echo "${USERNAME}:changeme" | /usr/sbin/chpasswd -P /mnt/data $USERNAME
+umount /mnt/data
+umount /mnt
+unset USERNAME

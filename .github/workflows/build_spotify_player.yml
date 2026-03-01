@@ -1,0 +1,35 @@
+name: Build spotify-player
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build spotify-player
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container:
+      image: alpine:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apk add --no-cache git gzip alsa-lib-dev cargo clang-dev cmake dbus-dev openssl-dev rust-bindgen wayland-dev pulseaudio-dev
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          git clone https://github.com/aome510/spotify-player -b v0.22.1
+          cd spotify-player
+          cargo build --release --no-default-features --features 'pulseaudio-backend,media-control,streaming'
+          gzip -f target/release/spotify_player
+      - name: Upload binary to repository
+        run: |
+          git config --global --add safe.directory '*'
+          cp spotify-player/target/release/spotify_player.gz root_files/usr/local/bin/
+          git add root_files/usr/local/bin/
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "CI: Update spotify-player binary [skip ci]"
+          git push

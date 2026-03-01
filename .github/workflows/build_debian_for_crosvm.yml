@@ -1,0 +1,52 @@
+name: Build Debian Image for crosvm
+
+on:
+  # push:
+  #   branches:
+  #     - master
+  #   paths:
+  #     - prepare_debian_for_crosvm.sh
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update system and install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            debootstrap \
+            qemu-base \
+            e2fsprogs \
+            util-linux \
+            git
+
+      - name: Run prepare_debian_for_crosvm.sh
+        run: bash prepare_debian_for_crosvm.sh
+
+      - name: Generate version tag
+        id: version
+        run: echo "tag=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Publish artifacts to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "debianvm-${{ steps.version.outputs.tag }}"
+          files: |
+            /opt/crosvm-image/deb_rootfs.ext4
+            /opt/crosvm-image/initrd.img
+            /opt/crosvm-image/vmlinuz
+          body: |
+            This image is used in the Debian VM that starts up with the system. It runs on crosvm, a VMM written in Rust and used by Android and ChromeOS.

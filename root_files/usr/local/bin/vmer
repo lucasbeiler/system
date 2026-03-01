@@ -1,0 +1,24 @@
+#!/bin/sh
+set -euo pipefail
+ 
+RELEASE_TAG="$(curl -s https://api.github.com/repos/lucasbeiler/system/releases | grep -i "debianvm-" | grep '"name"' | head -1 | cut -d'"' -f4 | sed 's/[^0-9]//g')"
+RELEASE_URL="https://github.com/lucasbeiler/system/releases/download/${RELEASE_TAG}"
+WORKDIR="$HOME/.vm_image"
+mkdir -p $WORKDIR
+ 
+# Helpers
+info() { echo -e "\e[1;32m[INFO]\e[0m  $*"; }
+die()  { echo -e "\e[1;31m[ERR]\e[0m   $*" >&2; exit 1; }
+ 
+info "Downloading images (if needed)..."
+[[ -f "$WORKDIR/vmlinuz" ]]         || curl -f -L --progress-bar -o "$WORKDIR/vmlinuz"                "$RELEASE_URL/vmlinuz"
+[[ -f "$WORKDIR/initrd.img" ]]      || curl -L -f --progress-bar -o "$WORKDIR/initrd.img"             "$RELEASE_URL/initrd.img"
+[[ -f "$WORKDIR/deb_rootfs.ext4" ]] || curl -L -f --progress-bar -o "$WORKDIR/deb_rootfs.ext4"        "$RELEASE_URL/deb_rootfs.ext4"
+ 
+truncate -s 50G $WORKDIR/deb_rootfs.ext4
+e2fsck -f $WORKDIR/deb_rootfs.ext4
+resize2fs $WORKDIR/deb_rootfs.ext4
+
+# TODO: Run in background.
+# TODO: Avoid it corrupting the disk image when terminating.
+crosvm run  --mem 4000 --cpus 4 -i $HOME/.vm_image/initrd.img --net tap-name=crosvm_tap --block $HOME/.vm_image/deb_rootfs.ext4,root $HOME/.vm_image/vmlinuz
